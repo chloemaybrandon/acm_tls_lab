@@ -101,14 +101,12 @@ def derive_handshake_params(
 
     Used for handshake key derivation.
     """
-    # TODO: derive necessary secrets
 
     null_48 = b"\x00"*48
     early_secret = sha384_hkdf_extract(b"\x00", null_48)
     empty_hash = hashlib.sha384(b"")
     
     derived_secret = labeled_sha384_hkdf(early_secret, b"derived", empty_hash.digest(), 48)
-    #handshake_secret = HKDF-Extract(salt: derived_secret, key: shared_secret)
 
     handshake_secret = sha384_hkdf_extract(derived_secret, shared_secret)
 
