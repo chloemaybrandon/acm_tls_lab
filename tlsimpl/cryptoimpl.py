@@ -102,13 +102,25 @@ def derive_handshake_params(
     Used for handshake key derivation.
     """
     # TODO: derive necessary secrets
-    handshake_secret = b"???"
-    client_secret = b"???"
-    server_secret = b"???"
-    client_key = b"???"
-    client_iv = b"???"
-    server_key = b"???"
-    server_iv = b"???"
+
+    null_48 = b"\x00"*48
+    early_secret = sha384_hkdf_extract(b"\x00", null_48)
+    empty_hash = hashlib.sha384(b"")
+    
+    derived_secret = labeled_sha384_hkdf(early_secret, b"derived", empty_hash.digest(), 48)
+    #handshake_secret = HKDF-Extract(salt: derived_secret, key: shared_secret)
+
+    handshake_secret = sha384_hkdf_extract(derived_secret, shared_secret)
+
+    client_secret = labeled_sha384_hkdf(handshake_secret, b"c hs traffic", transcript_hash, 48)
+    server_secret = labeled_sha384_hkdf(handshake_secret, b"s hs traffic", transcript_hash, 48)
+
+    client_key = labeled_sha384_hkdf(client_secret, b"key", b"", 32)
+    client_iv = labeled_sha384_hkdf(client_secret, b"iv", b"", 12)
+
+    server_key = labeled_sha384_hkdf(server_secret, b"key", b"", 32)
+    server_iv = labeled_sha384_hkdf(server_secret, b"iv", b"", 12)
+
     client_params = AESParams(client_secret, client_key, util.unpack(client_iv))
     server_params = AESParams(server_secret, server_key, util.unpack(server_iv))
     return (handshake_secret, client_params, server_params)
