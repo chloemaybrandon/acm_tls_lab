@@ -76,8 +76,9 @@ class AESParams:
 
         Specified in RFC8446 section 5.3.
         """
-        nonce = b"???"
-        # TODO: derive the nonce
+        nonce_bytes = self.initial_nonce ^ self.seq_num
+        nonce = util.pack(nonce_bytes, 12)
+        self.seq_num += 1
         return nonce
 
     def encrypt(self, msg: bytes, aad: bytes | None) -> bytes:
