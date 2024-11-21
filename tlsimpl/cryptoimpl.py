@@ -134,12 +134,24 @@ def derive_application_params(
     Used for application key derivation.
     """
     # TODO: derive client/server key/iv
-    client_secret = b"???"
-    server_secret = b"???"
-    client_key = b"???"
-    client_iv = b"???"
-    server_key = b"???"
-    server_iv = b"???"
+    # https://docs.google.com/presentation/d/1OlJ7DvCNvd1Bo9wSl6NxMfcxqu4bjgrHbVt5Y4_0dbU/edit#slide=id.g31081a8c6ef_0_156
+    handshake_hash = transcript_hash
+    empty_hash = hashlib.sha384(b"")
+
+    derived_secret = labeled_sha384_hkdf(handshake_secret, b"derived", empty_hash.digest(), 48)
+
+    null_48 = b"\x00"*48
+    master_secret = sha384_hkdf_extract(derived_secret, null_48)
+
+    client_secret = labeled_sha384_hkdf(master_secret, b"c ap traffic", handshake_hash, 48)
+    server_secret = labeled_sha384_hkdf(master_secret, b"s ap traffic", handshake_hash, 48)
+
+    client_key = labeled_sha384_hkdf(client_secret, b"key", b"", 32)
+    client_iv = labeled_sha384_hkdf(client_secret, b"iv", b"", 12)
+
+    server_key = labeled_sha384_hkdf(server_secret, b"key", b"", 32)
+    server_iv = labeled_sha384_hkdf(server_secret, b"iv", b"", 12)
+    
     client_params = AESParams(client_secret, client_key, util.unpack(client_iv))
     server_params = AESParams(server_secret, server_key, util.unpack(server_iv))
     return (client_params, server_params)
